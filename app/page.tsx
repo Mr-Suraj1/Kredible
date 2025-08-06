@@ -45,12 +45,16 @@ export default function LandingPage() {
                 </p>
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3">
-                  Get Early Access
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3" asChild>
+                  <Link href="/recruiter-signup">
+                    Start Verification Request
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Link>
                 </Button>
-                <Button variant="outline" size="lg" className="px-8 py-3 bg-transparent">
-                  See Example Card
+                <Button variant="outline" size="lg" className="px-8 py-3 bg-transparent" asChild>
+                  <Link href="#demo">
+                    See Example Card
+                  </Link>
                 </Button>
               </div>
               <div className="flex items-center space-x-4 text-sm text-muted-foreground">
@@ -244,9 +248,11 @@ export default function LandingPage() {
                   placeholder="Enter your email"
                   className="bg-white border-white text-gray-900 placeholder-gray-500"
                 />
-                <Button className="bg-white text-blue-600 hover:bg-gray-100 px-8">Get Early Access</Button>
+                <Button className="bg-white text-blue-600 hover:bg-gray-100 px-8" asChild>
+                  <Link href="/recruiter-signup">Get Started</Link>
+                </Button>
               </div>
-              <p className="text-sm text-blue-200 mt-4">No spam, unsubscribe at any time. We respect your privacy.</p>
+              <p className="text-sm text-blue-200 mt-4">Ready to streamline your hiring process? Start your first verification request.</p>
             </div>
           </div>
         </div>

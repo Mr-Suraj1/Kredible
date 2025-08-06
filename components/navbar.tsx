@@ -20,8 +20,8 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 const navigationItems = [
   {
     title: "How It Works",
-    href: "#how-it-works", // Corrected href
-    description: "Learn about our 3-step verification process", // Corrected description
+    href: "#how-it-works",
+    description: "Learn about our 3-step verification process",
   },
   {
     title: "Features",
@@ -42,6 +42,24 @@ const navigationItems = [
     title: "FAQ",
     href: "#faq",
     description: "Frequently asked questions",
+  },
+]
+
+const recruiterNavigationItems = [
+  {
+    title: "Dashboard",
+    href: "/dashboard",
+    description: "View all candidate profiles",
+  },
+  {
+    title: "New Request",
+    href: "/recruiter-signup",
+    description: "Send verification request",
+  },
+  {
+    title: "Help",
+    href: "#contact",
+    description: "Get support",
   },
 ]
 
@@ -85,13 +103,15 @@ export function Navbar({ isLoggedIn = false, userRole = "recruiter", notificatio
 
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center space-x-8">
-          {navigationItems.map((item) => (
+          {(isLoggedIn && userRole === "recruiter" ? recruiterNavigationItems : navigationItems).map((item) => (
             <Link
               key={item.title}
               href={item.href}
               onClick={(e) => {
-                e.preventDefault()
-                scrollToSection(item.href)
+                if (item.href.startsWith("#")) {
+                  e.preventDefault()
+                  scrollToSection(item.href)
+                }
               }}
               className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -174,15 +194,19 @@ export function Navbar({ isLoggedIn = false, userRole = "recruiter", notificatio
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm">
-                    Dashboard
+                    Account
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
+                  {userRole === "recruiter" && (
+                    <DropdownMenuItem asChild>
+                      <Link href="/dashboard">Dashboard</Link>
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem>Profile</DropdownMenuItem>
                   <DropdownMenuItem>Settings</DropdownMenuItem>
-                  <DropdownMenuItem>Billing</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Sign out</DropdownMenuItem>
                 </DropdownMenuContent>
@@ -192,8 +216,8 @@ export function Navbar({ isLoggedIn = false, userRole = "recruiter", notificatio
                 <Button variant="ghost" size="sm">
                   Sign In
                 </Button>
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700">
-                  Get Early Access
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700" asChild>
+                  <Link href="/recruiter-signup">Get Started</Link>
                 </Button>
               </>
             )}
@@ -217,13 +241,17 @@ export function Navbar({ isLoggedIn = false, userRole = "recruiter", notificatio
               </SheetHeader>
 
               <div className="flex flex-col space-y-4 mt-8">
-                {navigationItems.map((item) => (
+                {(isLoggedIn && userRole === "recruiter" ? recruiterNavigationItems : navigationItems).map((item) => (
                   <Link
                     key={item.title}
                     href={item.href}
                     onClick={(e) => {
-                      e.preventDefault()
-                      scrollToSection(item.href)
+                      if (item.href.startsWith("#")) {
+                        e.preventDefault()
+                        scrollToSection(item.href)
+                      } else {
+                        setIsOpen(false)
+                      }
                     }}
                     className="flex flex-col space-y-1 p-3 rounded-md hover:bg-muted transition-colors"
                   >
@@ -243,8 +271,13 @@ export function Navbar({ isLoggedIn = false, userRole = "recruiter", notificatio
                         )}
                         <span className="text-sm capitalize">{userRole}</span>
                       </div>
+                      {userRole === "recruiter" && (
+                        <Button className="w-full bg-transparent" variant="outline" asChild>
+                          <Link href="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
+                        </Button>
+                      )}
                       <Button className="w-full bg-transparent" variant="outline">
-                        Dashboard
+                        Sign Out
                       </Button>
                     </div>
                   ) : (
@@ -252,7 +285,9 @@ export function Navbar({ isLoggedIn = false, userRole = "recruiter", notificatio
                       <Button className="w-full bg-transparent" variant="outline">
                         Sign In
                       </Button>
-                      <Button className="w-full bg-blue-600 hover:bg-blue-700">Get Early Access</Button>
+                      <Button className="w-full bg-blue-600 hover:bg-blue-700" asChild>
+                        <Link href="/recruiter-signup" onClick={() => setIsOpen(false)}>Get Started</Link>
+                      </Button>
                     </div>
                   )}
                 </div>
