@@ -276,6 +276,11 @@ export default function LandingPage() {
               <h3 className="font-semibold mb-4">Product</h3>
               <ul className="space-y-2 text-gray-400">
                 <li>
+                  <Link href="/dashboard" className="hover:text-white">
+                    Dashboard
+                  </Link>
+                </li>
+                <li>
                   <Link href="#features" className="hover:text-white">
                     Features
                   </Link>

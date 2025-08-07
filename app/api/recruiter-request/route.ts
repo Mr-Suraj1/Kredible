@@ -24,6 +24,11 @@ interface RecruiterRequest {
 // In-memory storage for demo - replace with your database
 const recruiterRequests = new Map<string, RecruiterRequest>()
 
+// Set global reference for sharing between API routes
+if (typeof globalThis !== 'undefined') {
+  (globalThis as any).__KREDIBLE_REQUESTS__ = recruiterRequests
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

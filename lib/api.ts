@@ -14,9 +14,12 @@ export interface RecruiterFormData {
 }
 
 export interface CandidateFormData {
+  fullName?: string
   githubUsername?: string
   linkedinUrl?: string
   stackoverflowUrl?: string
+  portfolioUrl?: string
+  additionalProfiles?: string[]
   additionalInfo?: string
 }
 
@@ -62,7 +65,7 @@ class KredibleAPI {
 
   async validateCandidateToken(token: string): Promise<ApiResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/candidate-form/${token}`, {
+      const response = await fetch(`${this.baseUrl}/candidate-submit?token=${token}`, {
         method: 'GET',
       })
 
@@ -84,12 +87,12 @@ class KredibleAPI {
 
   async submitCandidateForm(token: string, data: CandidateFormData): Promise<ApiResponse> {
     try {
-      const response = await fetch(`${this.baseUrl}/candidate-form/${token}`, {
+      const response = await fetch(`${this.baseUrl}/candidate-submit`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ token, ...data }),
       })
 
       const result = await response.json()

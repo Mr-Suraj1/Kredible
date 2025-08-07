@@ -41,9 +41,12 @@ export default function CandidateFormPage() {
   const [isSuccess, setIsSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
+    fullName: "",
     githubUsername: "",
     linkedinUrl: "",
     stackoverflowUrl: "",
+    portfolioUrl: "",
+    additionalProfiles: [""],
     additionalInfo: ""
   })
 
@@ -80,14 +83,46 @@ export default function CandidateFormPage() {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
+  const handleAdditionalProfileChange = (index: number, value: string) => {
+    setFormData(prev => {
+      const newProfiles = [...prev.additionalProfiles]
+      newProfiles[index] = value
+      return { ...prev, additionalProfiles: newProfiles }
+    })
+  }
+
+  const addAdditionalProfile = () => {
+    setFormData(prev => ({
+      ...prev,
+      additionalProfiles: [...prev.additionalProfiles, ""]
+    }))
+  }
+
+  const removeAdditionalProfile = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      additionalProfiles: prev.additionalProfiles.filter((_, i) => i !== index)
+    }))
+  }
+
+  const validateUrl = (url: string): boolean => {
+    if (!url) return true // Optional fields
+    try {
+      new URL(url)
+      return /^https?:\/\/.+$/i.test(url)
+    } catch {
+      return false
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
     setError(null)
     
     // Validate at least one profile is provided
-    if (!formData.githubUsername && !formData.linkedinUrl) {
-      setError("Please provide at least your GitHub username or LinkedIn profile to continue")
+    if (!formData.githubUsername && !formData.linkedinUrl && !formData.portfolioUrl) {
+      setError("Please provide at least your GitHub, LinkedIn, or Portfolio URL to continue")
       setIsSubmitting(false)
       return
     }
@@ -112,9 +147,32 @@ export default function CandidateFormPage() {
       setIsSubmitting(false)
       return
     }
+
+    // Validate portfolio URL
+    if (formData.portfolioUrl && !validateUrl(formData.portfolioUrl)) {
+      setError("Please enter a valid portfolio/website URL")
+      setIsSubmitting(false)
+      return
+    }
+
+    // Validate additional profile URLs
+    const invalidProfileIndex = formData.additionalProfiles.findIndex(url => 
+      url.trim() && !validateUrl(url.trim())
+    )
+    if (invalidProfileIndex !== -1) {
+      setError(`Please enter a valid URL for additional profile #${invalidProfileIndex + 1}`)
+      setIsSubmitting(false)
+      return
+    }
     
     try {
-      const response = await kredibleAPI.submitCandidateForm(token, formData)
+      // Filter out empty additional profiles
+      const cleanedFormData = {
+        ...formData,
+        additionalProfiles: formData.additionalProfiles.filter(url => url.trim())
+      }
+      
+      const response = await kredibleAPI.submitCandidateForm(token, cleanedFormData)
       
       if (response.success) {
         setIsSuccess(true)
@@ -279,6 +337,23 @@ export default function CandidateFormPage() {
                   </Alert>
                 )}
 
+                {/* Full Name */}
+                <div className="space-y-2">
+                  <Label htmlFor="fullName" className="flex items-center">
+                    Full Name
+                    <Badge variant="outline" className="ml-2">Optional</Badge>
+                  </Label>
+                  <Input
+                    id="fullName"
+                    value={formData.fullName}
+                    onChange={(e) => handleInputChange("fullName", e.target.value)}
+                    placeholder="Your full name (controls anonymity level)"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    You can choose to remain anonymous by leaving this blank
+                  </p>
+                </div>
+
                 {/* GitHub */}
                 <div className="space-y-2">
                   <Label htmlFor="githubUsername" className="flex items-center">
@@ -335,6 +410,71 @@ export default function CandidateFormPage() {
                   </p>
                 </div>
 
+                {/* Portfolio/Personal Website */}
+                <div className="space-y-2">
+                  <Label htmlFor="portfolioUrl" className="flex items-center">
+                    <ExternalLink className="h-4 w-4 mr-2 text-purple-600" />
+                    Portfolio/Personal Website
+                    <Badge variant="outline" className="ml-2">Optional</Badge>
+                  </Label>
+                  <Input
+                    id="portfolioUrl"
+                    type="url"
+                    value={formData.portfolioUrl}
+                    onChange={(e) => handleInputChange("portfolioUrl", e.target.value)}
+                    placeholder="https://your-portfolio.com"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Your personal website, portfolio, or professional blog
+                  </p>
+                </div>
+
+                {/* Additional Profiles */}
+                <div className="space-y-3">
+                  <Label className="flex items-center">
+                    <ExternalLink className="h-4 w-4 mr-2 text-gray-600" />
+                    Additional Professional Profiles
+                    <Badge variant="outline" className="ml-2">Optional</Badge>
+                  </Label>
+                  
+                  {formData.additionalProfiles.map((url, index) => (
+                    <div key={index} className="flex gap-2">
+                      <Input
+                        type="url"
+                        value={url}
+                        onChange={(e) => handleAdditionalProfileChange(index, e.target.value)}
+                        placeholder={`Additional profile URL ${index + 1} (e.g., Twitter, Medium, etc.)`}
+                        className="flex-1"
+                      />
+                      {formData.additionalProfiles.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeAdditionalProfile(index)}
+                          className="px-3"
+                        >
+                          ×
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addAdditionalProfile}
+                    className="w-full"
+                  >
+                    + Add Another Profile
+                  </Button>
+                  
+                  <p className="text-xs text-muted-foreground">
+                    Include any other relevant professional profiles (Twitter, Medium, Dribbble, etc.)
+                  </p>
+                </div>
+
                 {/* Additional Info */}
                 <div className="space-y-2">
                   <Label htmlFor="additionalInfo">Additional Information (Optional)</Label>
@@ -382,15 +522,15 @@ export default function CandidateFormPage() {
                 <Button 
                   type="submit" 
                   className="w-full" 
-                  disabled={isSubmitting || (!formData.githubUsername && !formData.linkedinUrl)}
+                  disabled={isSubmitting || (!formData.githubUsername && !formData.linkedinUrl && !formData.portfolioUrl)}
                 >
                   {isSubmitting ? "Processing Your Profile..." : "Submit Profile Verification"}
                   <CheckCircle className="ml-2 h-4 w-4" />
                 </Button>
 
-                {(!formData.githubUsername && !formData.linkedinUrl) && (
+                {(!formData.githubUsername && !formData.linkedinUrl && !formData.portfolioUrl) && (
                   <p className="text-sm text-muted-foreground text-center">
-                    Please provide at least your GitHub username or LinkedIn profile to continue
+                    Please provide at least one professional profile (GitHub, LinkedIn, or Portfolio) to continue
                   </p>
                 )}
               </form>

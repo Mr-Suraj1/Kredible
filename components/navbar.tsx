@@ -271,11 +271,6 @@ export function Navbar({ isLoggedIn = false, userRole = "recruiter", notificatio
                         )}
                         <span className="text-sm capitalize">{userRole}</span>
                       </div>
-                      {userRole === "recruiter" && (
-                        <Button className="w-full bg-transparent" variant="outline" asChild>
-                          <Link href="/dashboard" onClick={() => setIsOpen(false)}>Dashboard</Link>
-                        </Button>
-                      )}
                       <Button className="w-full bg-transparent" variant="outline">
                         Sign Out
                       </Button>
