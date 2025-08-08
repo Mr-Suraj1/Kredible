@@ -1,4 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { 
+  RecruiterRequest,
+  findRequestByToken,
+  getKredibleStorage,
+  saveRequest,
+  debugStorage
+} from '../../../lib/storage'
 
 interface CandidateFormData {
   fullName?: string
@@ -10,41 +17,13 @@ interface CandidateFormData {
   additionalInfo?: string
 }
 
-interface RecruiterRequest {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  company: string
-  jobTitle: string
-  companySize?: string
-  candidateEmail: string
-  candidateName: string
-  positionTitle: string
-  additionalNotes?: string
-  token: string
-  status: 'pending' | 'completed' | 'expired'
-  createdAt: Date
-  expiresAt: Date
-  candidateData?: CandidateFormData & { submittedAt: Date }
-}
-
-// Import the recruiter requests from the global module
-const getRecruiterRequests = () => {
-  // Try to get the global variable that should be set by the recruiter-request route
-  if (typeof globalThis !== 'undefined' && (globalThis as any).__KREDIBLE_REQUESTS__) {
-    return (globalThis as any).__KREDIBLE_REQUESTS__ as Map<string, RecruiterRequest>
-  }
-  // Fallback: create a new map (this will be empty but prevents crashes)
-  return new Map<string, RecruiterRequest>()
-}
-
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
     const { token, ...formData }: { token: string } & CandidateFormData = body
 
     console.log('📝 Received candidate form submission for token:', token)
+    debugStorage()
 
     if (!token) {
       return NextResponse.json(
@@ -53,21 +32,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get recruiter requests
-    const requests = getRecruiterRequests()
-
     // Find the recruiter request by token
-    let foundRequest = null
-    for (const request of requests.values()) {
-      if (request.token === token) {
-        foundRequest = request
-        break
-      }
-    }
+    const foundRequest = findRequestByToken(token)
 
     if (!foundRequest) {
       console.log('❌ Token not found:', token)
-      console.log('Available requests:', Array.from(requests.keys()))
       return NextResponse.json(
         { success: false, error: 'Invalid or expired token' },
         { status: 404 }
@@ -76,7 +45,8 @@ export async function POST(request: NextRequest) {
 
     // Check if token has expired
     if (new Date() > foundRequest.expiresAt) {
-      requests.delete(foundRequest.id)
+      const storage = getKredibleStorage()
+      storage.delete(foundRequest.id)
       return NextResponse.json(
         { success: false, error: 'Token has expired' },
         { status: 410 }
@@ -136,17 +106,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Update the request with candidate data
-    const updatedRequest = {
+    const updatedRequest: RecruiterRequest = {
       ...foundRequest,
       candidateData: {
         ...formData,
         additionalProfiles: formData.additionalProfiles?.filter(url => url.trim()) || [],
         submittedAt: new Date()
       },
-      status: 'completed' as const
+      status: 'completed'
     }
 
-    requests.set(foundRequest.id, updatedRequest)
+    // Save the updated request
+    saveRequest(updatedRequest)
 
     console.log('✅ Candidate form submitted successfully for request:', foundRequest.id)
 
@@ -164,7 +135,7 @@ export async function POST(request: NextRequest) {
       data: {
         requestId: foundRequest.id,
         candidateName: foundRequest.candidateName,
-        submittedAt: updatedRequest.candidateData.submittedAt
+        submittedAt: updatedRequest.candidateData?.submittedAt
       }
     })
 
@@ -183,6 +154,7 @@ export async function GET(request: NextRequest) {
     const token = searchParams.get('token')
 
     console.log('🔍 Validating token:', token)
+    debugStorage()
 
     if (!token) {
       return NextResponse.json(
@@ -191,20 +163,8 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // Get recruiter requests
-    const requests = getRecruiterRequests()
-
-    console.log('📊 Available requests:', requests.size)
-    console.log('📊 Available tokens:', Array.from(requests.values()).map(r => r.token))
-
     // Find request by token
-    let foundRequest = null
-    for (const request of requests.values()) {
-      if (request.token === token) {
-        foundRequest = request
-        break
-      }
-    }
+    const foundRequest = findRequestByToken(token)
 
     if (!foundRequest) {
       console.log('❌ Token not found:', token)
@@ -216,7 +176,8 @@ export async function GET(request: NextRequest) {
 
     // Check if token has expired
     if (new Date() > foundRequest.expiresAt) {
-      requests.delete(foundRequest.id)
+      const storage = getKredibleStorage()
+      storage.delete(foundRequest.id)
       return NextResponse.json(
         { success: false, error: 'Token has expired' },
         { status: 410 }

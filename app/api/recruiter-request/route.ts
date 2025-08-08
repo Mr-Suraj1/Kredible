@@ -1,33 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { nanoid } from 'nanoid'
 import { EmailService } from '../../../lib/email'
-
-// TODO: Replace with your actual database implementation
-interface RecruiterRequest {
-  id: string
-  firstName: string
-  lastName: string
-  email: string
-  company: string
-  jobTitle: string
-  companySize?: string
-  candidateEmail: string
-  candidateName: string
-  positionTitle: string
-  additionalNotes?: string
-  token: string
-  status: 'pending' | 'completed' | 'expired'
-  createdAt: Date
-  expiresAt: Date
-}
-
-// In-memory storage for demo - replace with your database
-const recruiterRequests = new Map<string, RecruiterRequest>()
-
-// Set global reference for sharing between API routes
-if (typeof globalThis !== 'undefined') {
-  (globalThis as any).__KREDIBLE_REQUESTS__ = recruiterRequests
-}
+import { 
+  RecruiterRequest, 
+  getKredibleStorage, 
+  saveRequest, 
+  findRequestByToken,
+  debugStorage 
+} from '../../../lib/storage'
 
 export async function POST(request: NextRequest) {
   try {
@@ -59,6 +39,8 @@ export async function POST(request: NextRequest) {
     const token = nanoid(32)
     const requestId = nanoid(16)
 
+    console.log('🔧 Generated token:', token)
+
     // Create recruiter request
     const recruiterRequest: RecruiterRequest = {
       id: requestId,
@@ -78,13 +60,17 @@ export async function POST(request: NextRequest) {
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days from now
     }
 
-    // Store in database (replace with your DB logic)
-    recruiterRequests.set(requestId, recruiterRequest)
+    // Store in persistent storage
+    saveRequest(recruiterRequest)
+
+    // Debug storage state
+    debugStorage()
 
     // Create verification link
     const verificationLink = `${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/candidate-form/${token}`
 
     console.log('📧 Sending email to candidate...')
+    console.log('🔗 Verification link:', verificationLink)
 
     // Send email to candidate using SendGrid
     const emailResult = await EmailService.sendCandidateInvitation({
@@ -149,9 +135,6 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// Export the requests map for use in other API routes
-export { recruiterRequests }
-
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
@@ -164,16 +147,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    console.log('🔍 Looking for token:', token)
+    debugStorage()
+
     // Find request by token
-    let foundRequest: RecruiterRequest | undefined;
-    for (const request of recruiterRequests.values()) {
-      if (request.token === token) {
-        foundRequest = request;
-        break;
-      }
-    }
+    const foundRequest = findRequestByToken(token)
 
     if (!foundRequest) {
+      console.log('❌ Token not found:', token)
       return NextResponse.json(
         { success: false, error: 'Invalid or expired token' },
         { status: 404 }
@@ -182,12 +163,15 @@ export async function GET(request: NextRequest) {
 
     // Check if token has expired
     if (new Date() > foundRequest.expiresAt) {
-      recruiterRequests.delete(foundRequest.id);
+      const storage = getKredibleStorage()
+      storage.delete(foundRequest.id)
       return NextResponse.json(
         { success: false, error: 'Token has expired' },
         { status: 410 }
       )
     }
+
+    console.log('✅ Token found and valid')
 
     return NextResponse.json({
       success: true,
